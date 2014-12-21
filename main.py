@@ -10,7 +10,7 @@ running = True
 star_mass = 50000
 fps = 1.0
 (width, height) = (600,600)
-a = 1
+G = 10
 scale = 1
 pre_vel = 100 
 
@@ -37,6 +37,7 @@ clock = pygame.time.Clock()
 class Particle(pygame.sprite.Sprite):
 	def __init__(self, (x, y), mass, pre_vel, radius, star):
 		pygame.sprite.Sprite.__init__(self)
+		# initialize needed variables
 		self.x = x
 		self.y = y
 		self.star = star
@@ -48,9 +49,11 @@ class Particle(pygame.sprite.Sprite):
 		self.vely = 0
 		self.die = False
 
+		# making a surface for the particle
 		self.circle = pygame.Surface((radius * 2, radius * 2))
 		self.circle = self.circle.convert()
-			
+		
+		# check which kind of particle object is, and give circle a different size and color depending on what it is.	
 		if star:
 			pygame.draw.circle(self.circle, (255, 255, 255), (radius, radius), radius)
 		else:	
@@ -58,20 +61,22 @@ class Particle(pygame.sprite.Sprite):
 				
 		self.circle.set_colorkey(self.circle.get_at((0, 0)), pygame.RLEACCEL)
 
+		# give the circle an .rect
 		self.image = self.circle
 		self.rect = self.image.get_rect()
 
+		# center the circle
 		self.rect[0] = self.x - radius
 		self.rect[1] = self.y - radius
 
 	def calc(self):
 		# calculating difference in x and y positions
-		dx = self.x - star_x
-		dy = self.y - star_y
+		dx = abs(self.x) - star_x # dirty collision fix
+		dy = abs(self.y) - star_y # dirty collision fix
 
 		# calc distance, gravity and velocity
 		dz = math.hypot(dx, dy)
-		self.gravity = ((self.mass * star_mass) / dz**2)
+		self.gravity = G * ((self.mass * star_mass) / dz**2) 
 		self.vel = math.sqrt(self.gravity / (0.5 * self.mass))
 
 		# calculating x and y velocity
@@ -79,7 +84,7 @@ class Particle(pygame.sprite.Sprite):
 		self.vely += dy/dz * self.vel / scale
 
 		# updating postions
-		dt = 1 / float(fps) * a
+		dt = 1 / float(fps)
 		self.x -= self.velx * dt
 		self.y -= self.vely * dt
 		self.rect[0] = self.x
@@ -87,7 +92,7 @@ class Particle(pygame.sprite.Sprite):
 
 		# checking for collisions
 		radii = self.radius + star_radius
-		if dz == 0:
+		if dz <= radii:
 			self.die = True
 	
 # enable RenderUpdates
@@ -102,8 +107,9 @@ pygame.display.update(screen.blit(text, textRect))
 (star_x, star_y, star_radius) = (screen.get_width() / 2, screen.get_width() / 2, 70)
 stars.add(Particle((star_x, star_y), 1.989e30, 0, 70, True))
 
-star_x -= 10
-star_y -= 10
+# give the star the right pos (kinda dirty)
+star_x -= 6
+star_y -= 6
 
 pygame.display.update(stars.draw(screen))
 
@@ -111,15 +117,16 @@ pygame.display.update(stars.draw(screen))
 pygame.display.update()
 
 while running:
-	# get fps
+	# set fps
 	tick = clock.tick(60)
 
+	# check for key/ mouse events
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			running = False
 		elif event.type == pygame.MOUSEBUTTONDOWN:
 			(x, y) = pygame.mouse.get_pos()
-			particles.add(Particle((x, y), 5.972e24, pre_vel, 10, False))
+			particles.add(Particle((x, y), 1.989e29, pre_vel, 7, False))
 
 		elif event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_UP:
@@ -135,11 +142,13 @@ while running:
 			elif event.key == pygame.K_k:
 				for particle in particles:
 					particles.remove(particle)
-			
+			elif event.key == pygame.K_q:
+					running = False
+
 	particles.clear(screen, background)
 
+	# get excact fps
 	fps = clock.get_fps()
-	print pre_vel
 	for particle in particles:
 		if particle.star == False:
 			particle.calc()
@@ -148,5 +157,3 @@ while running:
 				pygame.display.update(stars.draw(screen))
 				pygame.display.update(screen.blit(text, textRect))
 	pygame.display.update(particles.draw(screen))
-
-
